@@ -295,7 +295,7 @@ class SAR_Project:
 
         # self.index[field][token].append((self.docid, self.newid))
         for field, doc_dict in self.index.items():
-            for token, doc_list in doc_dict:
+            for token, doc_list in doc_dict.items():
                 # 1- Todos los field existen, y están 
                 self.sindex[field][self.stemmer.stem(token)] = doc_list
 

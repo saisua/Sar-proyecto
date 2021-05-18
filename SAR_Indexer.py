@@ -32,7 +32,7 @@ if __name__ == "__main__":
     newsdir = args.newsdir
     indexfile = args.index
 
-    if(args.stemming and args.permuterm):
+    if(args.stem and args.permuterm):
         print("!! Desabilitado permuterm por el uso de stemming")
         args.permuterm = False
 

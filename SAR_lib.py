@@ -265,11 +265,16 @@ class SAR_Project:
 
         """
         
-        pass
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
 
+        
+        # self.index[field][token].append((self.docid, self.newid))
+        for field, doc_dict in self.index.items():
+            for token, doc_list in doc_dict:
+                # 1- Todos los field existen, y están 
+                self.sindex[field][self.stemmer.stem(token)] = doc_list
 
     
     def make_permuterm(self):

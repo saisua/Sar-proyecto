@@ -191,7 +191,7 @@ class SAR_Project:
 
         if(self.stemming):
             print("\tStemming... ", end='')
-            self.use_stemming()
+            self.make_stemming()
             print("DONE")
 
         elif(self.permuterm):

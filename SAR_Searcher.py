@@ -66,40 +66,53 @@ if __name__ == "__main__":
     else:
         fnc = searcher.solve_and_show
 
-    if args.test is not None:
-        # opt: -T, testing
+    # El try es para recordar volver a lanzar Indexer en
+    # caso de error
+    error = False
+    try:
+        if args.test is not None:
+            # opt: -T, testing
 
-        with open(args.test, encoding='utf-8') as fh:
-            lines = fh.read().split('\n')
-            for line in lines:
-                if len(line) > 0 and not line.startswith('#'):
-                    query, reference = line.split('\t')
-                    reference = int(reference)
-                    result = searcher.solve_and_count(query)
-                    if result != reference:
-                        print("==> ERROR: '%s'\t%d\t%d" % (query, result, reference))
-                        sys.exit(-1)
-                else:
-                    print(line)
-            print('\nParece que todo ha ido bien, buen trabajo!')
+            with open(args.test, encoding='utf-8') as fh:
+                lines = fh.read().split('\n')
+                for line in lines:
+                    if len(line) > 0 and not line.startswith('#'):
+                        query, reference = line.split('\t')
+                        reference = int(reference)
+                        result = searcher.solve_and_count(query)
+                        if result != reference:
+                            print("==> ERROR: '%s'\t%d\t%d" % (query, result, reference))
+                            sys.exit(-1)
+                    else:
+                        print(line)
+                print('\nParece que todo ha ido bien, buen trabajo!')
 
-    elif args.query is not None:
-        # opt: -Q, una query pasada como argumento
-        fnc(args.query) # searcher.solve_and_show(args.query)
+        elif args.query is not None:
+            # opt: -Q, una query pasada como argumento
+            fnc(args.query) # searcher.solve_and_show(args.query)
 
-    elif args.qlist is not None:
-        # opt: -L, una lista de queries
-        with open(args.qlist, encoding='utf-8') as fh:
-            queries = fh.read().split('\n')
-            queries.pop()
-            for query in queries:
-                if len(query) > 0 and not query.startswith('#'):
-                    fnc(query)
-                else:
-                    print(query)
-    else:
-        # modo interactivo
-        query = input("query:")
-        while query != "":
-            fnc(query)
+        elif args.qlist is not None:
+            # opt: -L, una lista de queries
+            with open(args.qlist, encoding='utf-8') as fh:
+                queries = fh.read().split('\n')
+                queries.pop()
+                for query in queries:
+                    if len(query) > 0 and not query.startswith('#'):
+                        fnc(query)
+                    else:
+                        print(query)
+        else:
+            # modo interactivo
             query = input("query:")
+            while query != "":
+                fnc(query)
+                query = input("query:")
+    except Exception as e:
+        error = True
+        raise e
+    finally:
+        if(error):
+            print("\n!!\nRecuerda: Si el problema no es un error de"
+                    " sintaxi, prueba a relanzar Sar_Indexer. Puede"
+                    " que el código haya cambiado, y el objeto generado"
+                    " esté desactualizado :D\n!!\n")

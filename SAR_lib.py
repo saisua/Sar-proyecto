@@ -174,7 +174,30 @@ class SAR_Project:
         ##########################################
         ## COMPLETAR PARA FUNCIONALIDADES EXTRA ##
         ##########################################
-        
+
+        self.post_indexing()
+
+    def post_indexing(self):
+        print("Running post indexing:")
+        if(self.multifield):
+            print("\tMultifield... ", end='')
+            # TODO: Multifield call
+            print("DONE")
+
+        if(self.positional):
+            print("\tPositional... ", end='')
+            # TODO: Positional call
+            print("DONE")
+
+        if(self.stemming):
+            print("\tStemming... ", end='')
+            self.use_stemming()
+            print("DONE")
+
+        elif(self.permuterm):
+            print("\tPermuterm... ", end='')
+            # TODO: Permuterm call
+            print("DONE")
 
     def index_file(self, filename):
         """
@@ -269,7 +292,7 @@ class SAR_Project:
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
 
-        
+
         # self.index[field][token].append((self.docid, self.newid))
         for field, doc_dict in self.index.items():
             for token, doc_list in doc_dict:

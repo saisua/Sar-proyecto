@@ -191,7 +191,7 @@ class SAR_Project:
 
         if(self.stemming):
             print("\tStemming... ", end='')
-            self.use_stemming()
+            self.make_stemming()
             print("DONE")
 
         elif(self.permuterm):
@@ -232,7 +232,7 @@ class SAR_Project:
         #################
         
         self.docs[self.docid] = filename
-        for noticia in jlist:
+        for num_not, noticia in enumerate(jlist):
             for field, tokenize in self.fields:
                
                 if tokenize and field != "date":
@@ -258,7 +258,7 @@ class SAR_Project:
                     self.index[field][token][(self.docid, self.newid)].append(nt) # ??
                     nt = 1 # ??
 
-            self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt)
+            self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt, self.newid-num_not)
             self.newid += 1
             
             self.num_days[noticia['date']] = True
@@ -299,7 +299,7 @@ class SAR_Project:
 
         # self.index[field][token].append((self.docid, self.newid))
         for field, doc_dict in self.index.items():
-            for token, doc_list in doc_dict:
+            for token, doc_list in doc_dict.items():
                 # 1- Todos los field existen, y están 
                 self.sindex[field][self.stemmer.stem(token)] = doc_list
 
@@ -566,6 +566,7 @@ class SAR_Project:
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
+        return self.sindex[stem].get(term, [])
 
 
     def get_permuterm(self, term, field='article'):
@@ -798,48 +799,45 @@ class SAR_Project:
             re.sub("(NOT\s+\S+)|(AND)|OR", '', query.lower()).split())))
 
         if self.show_snippet:
-            last = -1
-
+            last_doc_id = -1
             for solved in result:
-                token_num = solved[1]
-                doc_id = solved[0]
+                doc_id, news_num = solved
+                
+                # self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt)
+                _, date, title, keywords, _, news_in_doc_num = self.news[news_num]
 
-                if(last != doc_id):
-                    last = doc_id
-
+                if(doc_id != last_doc_id):
+                    last_doc_id = doc_id
                     with open(self.docs[doc_id], 'r') as file:
-                        doc = json.load(file)[0]
+                        # Only get news for memory usage
+                        docs = tuple(map(lambda news: news["article"], json.load(file)))
 
-                    print(f"#{solved[1]}\n"
-                        f"Score: { 0 if len(solved) <3 else solved[2]}\n"
-                        f"{doc_id}\n"
-                        f"Date: {doc['date']}\n"
-                        f"Title: {doc['title']}\n"
-                        f"Keywords: {doc['keywords']}"
-                    )
+                article = docs[news_num-news_in_doc_num].lower().split()
 
-                    last_pos = 0
-                    words_printed = 5
-                    article = doc["article"].lower().split()
-                    for pos, word in enumerate(article):
-                        if(word in query_words):
-                            if(last_pos and pos > last_pos+words_printed):
-                                print(" ... ", end='')
-                            else:
-                                print(' ', end='')
-                            
-                            print(' '.join(
-                                    article[max(last_pos, pos-words_printed) : pos+words_printed]
-                                ), end='')
-                            last_pos = pos
-                    if(not last_pos):
-                        print("No se han encontrado snippets en el cuerpo de la notícia",end='')
-                    print('\n--------------------\n')
+                print(f"#{solved[1]}\n"
+                    f"Score: { 0 if len(solved) <3 else solved[2]}\n"
+                    f"{doc_id}\n"
+                    f"Date: {date}\n"
+                    f"Title: {title}\n"
+                    f"Keywords: {keywords}"
+                )
 
-
-                
-
-                
+                last_pos = 0
+                words_printed = 5
+                for pos, word in enumerate(article):
+                    if(word in query_words):
+                        if(last_pos and pos > last_pos+words_printed):
+                            print(" ... ", end='')
+                        else:
+                            print(' ', end='')
+                        
+                        print(' '.join(
+                                article[max(last_pos, pos-words_printed) : pos+words_printed]
+                            ), end='')
+                        last_pos = pos
+                if(not last_pos):
+                    print("No se han encontrado snippets en el cuerpo de la notícia",end='')
+                print('\n--------------------\n')
 
         return len(result)
 

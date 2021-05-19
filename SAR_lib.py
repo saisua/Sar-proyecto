@@ -311,10 +311,36 @@ class SAR_Project:
         Crea el indice permuterm (self.ptindex) para los terminos de todos los indices.
 
         """
-        pass
+        
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
+        if self.multifield:
+            
+            f = []
+            for i in self.fields:
+                f.append(i[0])
+
+            for field in range(len(f)):
+                for termino in self.index[f[field]].keys():
+                    t = termino
+                    termino += '$'
+                    permu = []
+
+                    for i in range(len(termino)):
+                        termino = termino[1:] + termino[0]
+                        permu.append(termino)
+                    self.ptindex[f[field]][t] = len(permu) if self.ptindex[f[field]].get(t) == None else self.ptindex[f[field]][t] + len(permu)    
+        else:
+            for termino in self.index['article'].keys():
+                termino += '$'
+                permu = []
+
+                for i in range(len(termino)-1):
+                    termino = termino[1:] + termino[0]
+                    permu.append(termino)
+
+                self.ptindex['article'][termino] = len(permu) +1
 
 
 
@@ -585,7 +611,21 @@ class SAR_Project:
         ##################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA PERMUTERM ##
         ##################################################
+        self.make_permuterm()        
+        print("Permuterm en funcionamiento")
+        termino = term.replace("?", "*")
+        query = termino + '$'
+        while query[-1] is not "*":
+            query = query[1:] + query[0]
 
+        for permuterms in self.ptindex:
+            for term in permuterms:
+                if term.startswith(query[:-1]):
+                    print("Permuterm encontrado")
+                    return self.index[field][t]
+
+        print("Permuterm no encontrado...")
+        return []
 
 
 

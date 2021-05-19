@@ -240,19 +240,23 @@ class SAR_Project:
                     
                     for nt, token in enumerate(tokens):
                         if not self.index[field].get(token, 0):
-                            self.index[field][token] = []
-                        if (self.docid, self.newid) not in self.index[field][token]:
-                            self.index[field][token].append((self.docid, self.newid))
+                            self.index[field][token] = {} # self.index[field][token] = []
+                            
+                        if not self.index[field][token].get((self.docid, self.newid), 0): # if (self.docid, self.newid) not in self.index[field][token]:
+                            self.index[field][token][(self.docid, self.newid)] = [] # self.index[field][token].append((self.docid, self.newid))
+                            # self.iindex[field][(self.docid, self.newid)][token].append(nt)
                             self.iindex[field][self.docid][token].append(nt)
+                        self.index[field][token][(self.docid, self.newid)].append(nt)
                     
                 else:
                     token = noticia[field]
                     if not self.index[field].get(token, 0):
-                            self.index[field][token] = []
-                    if (self.docid, self.newid) not in self.index[field][token]:
-                        self.index[field][token].append((self.docid, self.newid))
+                            self.index[field][token] = {} # self.index[field][token] = {}
+                    if not self.index[field][token].get((self.docid, self.newid), 0): # if (self.docid, self.newid) not in self.index[field][token]:
+                        self.index[field][token][(self.docid, self.newid)] = [] # self.index[field][token].append((self.docid, self.newid))
                         self.iindex[field][self.docid][token].append(0)
-                    nt = 1
+                    self.index[field][token][(self.docid, self.newid)].append(nt) # ??
+                    nt = 1 # ??
 
             self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt)
             self.newid += 1
@@ -519,10 +523,29 @@ class SAR_Project:
         return: posting list
 
         """
-        pass
+        result = self.index[field][terms[0]]
         ########################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE POSICIONALES ##
         ########################################################
+        for term in terms[1:]:
+            for _, (key, p1) in enumerate(result): # recorrem el diccionari result
+                if self.index[field][term].get(key, 0): # comprovem si la clau (docid, newid) existeix per al terme actual
+                    p2 = self.index[field][term].get(key)
+                    found = False
+                    for pos in p1:
+                       if int(pos + 1) in p2: # comprovem que p2 continga posicions contigues
+                           found = True
+                    if not found:
+                        result.pop(key) # si no hem trobat cap posició contigua en esta clau, la eliminem del diccionari resultat
+
+
+        
+        # TODO:
+        # comprovar que la clau de self.index[field][term] 
+        # comprovar per a que hi hagen números contigus de aparicions (posició + t per trobar el desplaçament de paraules)
+        # eliminar de result totes les claus (docid, newid) que no continguen posicions contigues
+        # repetir per al seguent terme
+        return result
 
 
     def get_stemming(self, term, field='article'):

@@ -46,7 +46,13 @@ class SAR_Project:
         self.iindex = dict(((field,defaultdict(lambda:defaultdict(list))) for field, _ in self.fields))
         # hash para termino -> clave
         self.sindex = dict(((field,{}) for field, _ in self.fields)) # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
-        self.ptindex = dict(((field,{}) for field, _ in self.fields)) # hash para el indice permuterm.
+        self.ptindex = {
+                'title': {},
+                'date': {},
+                'keywords': {},
+                'summary': {},
+                'article': {}
+        } # hash para el indice permuterm.
         self.docs = {} # diccionario de documentos --> clave: entero(docid),  valor: ruta del fichero.
         self.weight = {} # hash de terminos para el pesado, ranking de resultados. puede no utilizarse
         self.news = {} # hash de noticias --> clave entero (newid), valor: la info necesaria para diferenciar la noticia dentro de su fichero (doc_id y posición dentro del documento)

@@ -315,14 +315,15 @@ class SAR_Project:
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
+
         if self.multifield:
             
-            f = []
+            fi = []
             for i in self.fields:
-                f.append(i[0])
+                fi.append(i[0])
 
-            for field in range(len(f)):
-                for termino in self.index[f[field]].keys():
+            for field in range(len(fi)):
+                for termino in self.index[fi[field]].keys():
                     t = termino
                     termino += '$'
                     permu = []
@@ -330,7 +331,7 @@ class SAR_Project:
                     for i in range(len(termino)):
                         termino = termino[1:] + termino[0]
                         permu.append(termino)
-                    self.ptindex[f[field]][t] = len(permu) if self.ptindex[f[field]].get(t) == None else self.ptindex[f[field]][t] + len(permu)    
+                    self.ptindex[fi[field]][t] = len(permu) if self.ptindex[fi[field]].get(t) == None else self.ptindex[fi[field]][t] + len(permu)    
         else:
             for termino in self.index['article'].keys():
                 termino += '$'
@@ -641,7 +642,7 @@ class SAR_Project:
             for term in permuterms:
                 if term.startswith(query[:-1]):
                     print("Permuterm encontrado")
-                    return self.index[field][t]
+                    return self.index[field][term]
 
         print("Permuterm no encontrado...")
         return []

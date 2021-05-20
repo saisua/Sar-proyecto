@@ -196,7 +196,7 @@ class SAR_Project:
 
         elif(self.permuterm):
             print("\tPermuterm... ", end='')
-            # TODO: Permuterm call
+            self.make_permuterm()
             print("DONE")
 
     def index_file(self, filename):
@@ -424,6 +424,8 @@ class SAR_Project:
                 if ':' in queryPartida[1]:
                     mqPartida = queryPartida[1].split(':')
                     nextP = self.get_posting(mqPartida[1], mqPartida[0])
+                elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                    nextP = self.get_permuterm(queryPartida[1])
                 else:
                     nextP = self.get_posting(queryPartida[1])
                 nextP = list(nextP)
@@ -435,6 +437,8 @@ class SAR_Project:
                     nextP = self.get_posting(mqPartida[1], mqPartida[0])
                 elif len(queryPartida) == 2 and queryPartida[i].startswith("\"") and queryPartida[i+1].endswith("\""): # posicionals
                     nextP = self.get_positionals(queryPartida)
+                elif "?" in queryPartida[i] or "*" in queryPartida[i]: # permuterm
+                    nextP = self.get_permuterm(queryPartida[i])
                 else:
                     nextP = self.get_posting(queryPartida[i])
 
@@ -460,6 +464,8 @@ class SAR_Project:
                             nextP = self.get_positionals(positional)
                         else: 
                             return []
+                    elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                        nextP = self.get_permuterm(queryPartida[1])
                     else:
                         nextP = self.get_posting(queryPartida[i + 1])
                     nextP = list(nextP)
@@ -480,6 +486,8 @@ class SAR_Project:
                                 if i < len(queryPartida):
                                     positional.append(queryPartida[i])
                                 nextP = self.get_positionals(positional) 
+                            elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                                nextP = self.get_permuterm(queryPartida[1])
                             else:
                                 nextP = self.get_posting(queryPartida[i + 2])
                             nextP = list(nextP)
@@ -501,6 +509,8 @@ class SAR_Project:
                                     positional.append(queryPartida[i])
                                 print(positional)
                                 nextP = self.get_positionals(positional) 
+                            elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                                nextP = self.get_permuterm(queryPartida[1])
                             else:
                                 nextP = self.get_posting(queryPartida[i + 1])
                             nextP = list(nextP)
@@ -520,6 +530,8 @@ class SAR_Project:
                                 if i < len(queryPartida):
                                     positional.append(queryPartida[i])
                                 nextP = self.get_positionals(positional) 
+                            elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                                nextP = self.get_permuterm(queryPartida[1])
                             else:
                                 nextP = self.get_posting(queryPartida[i + 2])
                             nextP = list(nextP)
@@ -539,6 +551,8 @@ class SAR_Project:
                                 if i < len(queryPartida):
                                     positional.append(queryPartida[i])
                                 nextP = self.get_positionals(positional) 
+                            elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                                nextP = self.get_permuterm(queryPartida[1])
                             else:
                                 nextP = self.get_posting(queryPartida[i + 1])
                             nextP = list(nextP)
@@ -557,6 +571,8 @@ class SAR_Project:
                             if i < len(queryPartida):
                                 positional.append(queryPartida[i])
                             result = self.get_positionals(positional) 
+                        elif "?" in queryPartida[i] or "*" in queryPartida[i]:
+                            nextP = self.get_permuterm(queryPartida[1])
                         else:
                             result = self.get_posting(queryPartida[i])
                         result = list(result)
@@ -694,7 +710,7 @@ class SAR_Project:
         ##################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA PERMUTERM ##
         ##################################################
-        self.make_permuterm()        
+        # self.make_permuterm()        
         print("Permuterm en funcionamiento")
         termino = term.replace("?", "*")
         query = termino + '$'

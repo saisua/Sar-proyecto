@@ -413,111 +413,157 @@ class SAR_Project:
         result = []
         self.searched_terms = []
 
-        if self.positional and query.startswith("\""):
-            queryPartida = query[1:-1]
-            queryPartida = queryPartida.split()
-            # gastar get posting
-            result = self.get_positionals(queryPartida)
-            print("retornat")
-            result = list(result)
-            print("convertit")
+        
+        queryPartida = query.split()
+
+        i = 0
+        if queryPartida[i] == "AND" or queryPartida[i] == "OR": # comprovem que la cadena no comence per operadors
             return result
-        else:
-            queryPartida = query.split()
-
-            i = 0
-            if queryPartida[i] == "AND" or queryPartida[i] == "OR":
-                return result
-            if len(queryPartida) <3:
-                if len(queryPartida) == 2 and queryPartida[i] == "NOT":
-                    if ':' in queryPartida[1]:
-                        mqPartida = queryPartida[1].split(':')
-                        nextP = self.get_posting(mqPartida[1], mqPartida[0])
-                    else:
-                        nextP = self.get_posting(queryPartida[1])
-                    nextP = list(nextP)
-                    nextP.sort()
-                    return self.reverse_posting(nextP)
-                elif len(queryPartida) <= 2  and queryPartida[i] != "NOT":
-                    if ':' in queryPartida[i]:
-                        mqPartida = queryPartida[i].split(':')
-                        nextP = self.get_posting(mqPartida[1], mqPartida[0])
-                    else:
-                        nextP = self.get_posting(queryPartida[i])
-
-                    nextP = list(nextP)
-                    nextP.sort()
-                    return nextP
+        if len(queryPartida) <3: # per a cadenes amb <3 elements
+            if len(queryPartida) == 2 and queryPartida[i] == "NOT": # si comença amb NOT -> negació
+                if ':' in queryPartida[1]:
+                    mqPartida = queryPartida[1].split(':')
+                    nextP = self.get_posting(mqPartida[1], mqPartida[0])
                 else:
-                    return result
-            else:
-                while i < len(queryPartida) - 1:
-                    if queryPartida[i] == "NOT":
-                        if ':' in queryPartida[i + 1]:
-                            mqPartida = queryPartida[i + 1].split(':')
-                            nextP = self.get_posting(mqPartida[1], mqPartida[0])
-                        else:
-                            nextP = self.get_posting(queryPartida[i + 1])
-                        nextP = list(nextP)
-                        nextP.sort()
-                        result = self.reverse_posting(nextP)
-                        i = i + 1
+                    nextP = self.get_posting(queryPartida[1])
+                nextP = list(nextP)
+                nextP.sort()
+                return self.reverse_posting(nextP)
+            elif len(queryPartida) <= 2  and queryPartida[i] != "NOT": # si no comença amb NOT -> resolem query del primer elemen només (?)
+                if ':' in queryPartida[i]: # multifield
+                    mqPartida = queryPartida[i].split(':')
+                    nextP = self.get_posting(mqPartida[1], mqPartida[0])
+                elif len(queryPartida) == 2 and queryPartida[i].startswith("\"") and queryPartida[i+1].endswith("\""): # posicionals
+                    nextP = self.get_positionals(queryPartida)
+                else:
+                    nextP = self.get_posting(queryPartida[i])
+
+                nextP = list(nextP)
+                nextP.sort()
+                return nextP
+            else: # si no es compleixen les condicions -> error de sintaxi
+                return result
+        else: # per a queries >2 elements
+            while i < len(queryPartida) - 1: # recorrem la query
+                if queryPartida[i] == "NOT": # si comença amb NOT -> neguem el seguent token
+                    if ':' in queryPartida[i + 1]:
+                        mqPartida = queryPartida[i + 1].split(':')
+                        nextP = self.get_posting(mqPartida[1], mqPartida[0])
+                    elif queryPartida[i].startswith("\""): # posicional
+                        i = i + 1 # posem i sobre el primer token posicional
+                        positional = []
+                        while not queryPartida[i].endswith("\"") and i < len(queryPartida): # recorrem la query per buscar el final del sintagma posicional
+                            positional.append(queryPartida[i])
+                            i = i + 1
+                        if i < len(queryPartida):
+                            positional.append(queryPartida[i])
+                            nextP = self.get_positionals(positional)
+                        else: 
+                            return []
                     else:
-                        if queryPartida[i] == "AND":
-                            if queryPartida[i + 1] == "NOT":
-                                if ':' in queryPartida[i + 2]:
-                                    mqPartida = queryPartida[i + 2].split(':')
-                                    nextP = self.get_posting(mqPartida[1],mqPartida[0])
-                                else:
-                                    nextP = self.get_posting(queryPartida[i + 2])
-                                nextP = list(nextP)
-                                nextP.sort()
-                                nextP = self.reverse_posting(nextP)
-                                result = self.and_posting(result, nextP)
-                                i = i + 2
-                            else:
-                                if ':' in queryPartida[i + 1]:
-                                    mqPartida = queryPartida[i + 1].split(':')
-                                    nextP = self.get_posting(mqPartida[1], mqPartida[0])
-                                else:
-                                    nextP = self.get_posting(queryPartida[i + 1])
-                                nextP = list(nextP)
-                                nextP.sort()
-                                result = self.and_posting(result, nextP)
-                                i = i + 1
-                        elif queryPartida[i] == "OR":
-                            if queryPartida[i + 1] == "NOT":
-                                if ':' in queryPartida[i + 2]:
-                                    mqPartida = queryPartida[i + 2].split(':')
-                                    nextP = self.get_posting(mqPartida[1], mqPartida[0])
-                                else:
-                                    nextP = self.get_posting(queryPartida[i + 2])
-                                nextP = list(nextP)
-                                nextP.sort()
-                                nextP = self.reverse_posting(nextP)
-                                result = self.or_posting(result, nextP)
-                                i = i + 2
-                            else:
-                                if ':' in queryPartida[i + 1]:
-                                    mqPartida = queryPartida[i + 1].split(':')
-                                    nextP = self.get_posting(mqPartida[1], mqPartida[0])
-                                else:
-                                    nextP = self.get_posting(queryPartida[i + 1])
-                                nextP = list(nextP)
-                                nextP.sort()
-                                result = self.or_posting(result, nextP)
-                                i = i + 1
-                        else:
-                            if ':' in queryPartida[i]:
-                                mqPartida = queryPartida[i].split(':')
-                                result = self.get_posting(mqPartida[1], mqPartida[0])
-                            else:
-                                result = self.get_posting(queryPartida[i])
-                            result = list(result)
-                            result.sort()
+                        nextP = self.get_posting(queryPartida[i + 1])
+                    nextP = list(nextP)
+                    nextP.sort()
+                    result = self.reverse_posting(nextP)
                     i = i + 1
-            print(result)
-            return result
+                else:
+                    if queryPartida[i] == "AND": # si token == AND -> resolem la query seguent i apliquem AND
+                        if queryPartida[i + 1] == "NOT":
+                            if ':' in queryPartida[i + 2]:
+                                mqPartida = queryPartida[i + 2].split(':')
+                                nextP = self.get_posting(mqPartida[1],mqPartida[0])
+                            elif queryPartida[i].startswith("\""):
+                                positional = []
+                                while i < len(queryPartida) and not queryPartida[i].endswith("\""):
+                                    positional.append(queryPartida[i])
+                                    i = i + 1
+                                if i < len(queryPartida):
+                                    positional.append(queryPartida[i])
+                                nextP = self.get_positionals(positional) 
+                            else:
+                                nextP = self.get_posting(queryPartida[i + 2])
+                            nextP = list(nextP)
+                            nextP.sort()
+                            nextP = self.reverse_posting(nextP)
+                            result = self.and_posting(result, nextP)
+                            i = i + 2
+                        else:
+                            if ':' in queryPartida[i + 1]:
+                                mqPartida = queryPartida[i + 1].split(':')
+                                nextP = self.get_posting(mqPartida[1], mqPartida[0])
+                            elif queryPartida[i + 1].startswith("\""):
+                                positional = []
+                                i = i + 1
+                                while i < len(queryPartida) and not queryPartida[i].endswith("\""):
+                                    positional.append(queryPartida[i])
+                                    i = i + 1
+                                if i < len(queryPartida):
+                                    positional.append(queryPartida[i])
+                                print(positional)
+                                nextP = self.get_positionals(positional) 
+                            else:
+                                nextP = self.get_posting(queryPartida[i + 1])
+                            nextP = list(nextP)
+                            nextP.sort()
+                            result = self.and_posting(result, nextP)
+                            i = i + 1
+                    elif queryPartida[i] == "OR": # si token == OR -> resolem la query seguent i apliquem OR
+                        if queryPartida[i + 1] == "NOT":
+                            if ':' in queryPartida[i + 2]:
+                                mqPartida = queryPartida[i + 2].split(':')
+                                nextP = self.get_posting(mqPartida[1], mqPartida[0])
+                            elif queryPartida[i].startswith("\""):
+                                positional = []
+                                while i < len(queryPartida) and not queryPartida[i].endswith("\""):
+                                    positional.append(queryPartida[i])
+                                    i = i + 1
+                                if i < len(queryPartida):
+                                    positional.append(queryPartida[i])
+                                nextP = self.get_positionals(positional) 
+                            else:
+                                nextP = self.get_posting(queryPartida[i + 2])
+                            nextP = list(nextP)
+                            nextP.sort()
+                            nextP = self.reverse_posting(nextP)
+                            result = self.or_posting(result, nextP)
+                            i = i + 2
+                        else:
+                            if ':' in queryPartida[i + 1]:
+                                mqPartida = queryPartida[i + 1].split(':')
+                                nextP = self.get_posting(mqPartida[1], mqPartida[0])
+                            elif queryPartida[i].startswith("\""):
+                                positional = []
+                                while i < len(queryPartida) and not queryPartida[i].endswith("\""):
+                                    positional.append(queryPartida[i])
+                                    i = i + 1
+                                if i < len(queryPartida):
+                                    positional.append(queryPartida[i])
+                                nextP = self.get_positionals(positional) 
+                            else:
+                                nextP = self.get_posting(queryPartida[i + 1])
+                            nextP = list(nextP)
+                            nextP.sort()
+                            result = self.or_posting(result, nextP)
+                            i = i + 1
+                    else: # per qualsevol altre cas -> resolem la query normalment (primer token)
+                        if ':' in queryPartida[i]:
+                            mqPartida = queryPartida[i].split(':')
+                            result = self.get_posting(mqPartida[1], mqPartida[0])
+                        elif queryPartida[i].startswith("\""):
+                            positional = []
+                            while i < len(queryPartida) and not queryPartida[i].endswith("\""):
+                                positional.append(queryPartida[i])
+                                i = i + 1
+                            if i < len(queryPartida):
+                                positional.append(queryPartida[i])
+                            result = self.get_positionals(positional) 
+                        else:
+                            result = self.get_posting(queryPartida[i])
+                        result = list(result)
+                        result.sort()
+                i = i + 1
+        # print(result)
+        return result
 
  
 
@@ -561,9 +607,14 @@ class SAR_Project:
         return: posting list
 
         """
-        print(terms[0])
+        self.searched_terms.append(field + ":" + terms[0])
+        if terms[0].startswith("\""):
+            terms[0] = terms[0][1:]
+            terms[-1] = terms[-1][:-1]
+
+        # print(terms[0])
         aux = self.index[field][terms[0]]
-        print(aux)
+        # print(aux)
         result = []
         vists = []
         coincidencia = False
@@ -574,7 +625,13 @@ class SAR_Project:
 
         # FUNCIONA PER A TOT SINTAGMA DE TERMES CONSECUTIUS, PERÒ NO ÉS CAPAÇ DE DETECTAR INSTÀNCIES ON UN DELS TERMES INTERMIJOS FALLA!!!
 
+        if len(terms) == 1:
+            for _, (key, key2) in enumerate(aux):
+                result.append((key, key2)) 
+            return result
+
         for term in terms[1:]:
+            self.searched_terms.append(field + ":" + term)
             for _, (key, key2) in enumerate(aux): # recorrem el diccionari aux
                 if (key, key2) in vists: continue # si ja hem visitat un document i no pot haver instàncies de la query, passem al seguent document
                 p1 = aux.get((key, key2))
@@ -596,7 +653,7 @@ class SAR_Project:
         # comprovar per a que hi hagen números contigus de aparicions (posició + t per trobar el desplaçament de paraules)
         # eliminar de result totes les claus (docid, newid) que no continguen posicions contigues
         # repetir per al seguent terme
-        print("returning")
+        # print("returning")
         return result
 
 

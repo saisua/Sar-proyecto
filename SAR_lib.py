@@ -416,7 +416,7 @@ class SAR_Project:
         if self.positional and query.startswith("\""):
             queryPartida = query[1:-1]
             queryPartida = queryPartida.split()
-
+            # gastar get posting
             result = self.get_positionals(queryPartida)
             print("retornat")
             result = list(result)
@@ -565,23 +565,29 @@ class SAR_Project:
         aux = self.index[field][terms[0]]
         print(aux)
         result = []
-        query = ""
+        vists = []
+        coincidencia = False
+        
         ########################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE POSICIONALES ##
         ########################################################
+
+        # FUNCIONA PER A TOT SINTAGMA DE TERMES CONSECUTIUS, PERÒ NO ÉS CAPAÇ DE DETECTAR INSTÀNCIES ON UN DELS TERMES INTERMIJOS FALLA!!!
+
         for term in terms[1:]:
-            query += term + " "
             for _, (key, key2) in enumerate(aux): # recorrem el diccionari aux
+                if (key, key2) in vists: continue # si ja hem visitat un document i no pot haver instàncies de la query, passem al seguent document
                 p1 = aux.get((key, key2))
                 if self.index[field][term].get((key, key2), 0): # comprovem si la clau (docid, newid) existeix per al terme actual
                     p2 = self.index[field][term].get((key, key2))
-                    found = False
                     for pos in p1:
-                       if int(pos + terms.index(term)) in p2: # comprovem que p2 continga posicions contigues
-                           found = True
-                    if found:
-                        # aux.pop((key, key2)) # si no hem trobat cap posició contigua en esta clau, la eliminem del diccionari aux
-                        result.append((key, key2))
+                        if int(pos + terms.index(term)) in p2: # comprovem que p2 continga posicions contigues i afegim la clau al resultat
+                            if (key, key2) not in result: result.append((key, key2))
+                            coincidencia = True
+                if not coincidencia: 
+                    vists.append((key,key2))
+                    if (key, key2) in result: result.remove((key, key2))
+                coincidencia = False
 
 
         

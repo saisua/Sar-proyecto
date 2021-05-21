@@ -537,7 +537,7 @@ class SAR_Project:
                 # como que no lo haya. Split devolverá uno o dos
                 # elementos en base a si lo hay, y evitamos código
                 # y recorridos de strings innecesarios 
-                nextP = self.get_posting(*(query_word.split(':',1))[::-1])
+                nextP = self.get_posting(*(query_word.split(':',1)[::-1]))
  
             # Esto hay que quitarlo. En serio alguna de
             # estas funciones devuelve un diccionario??
@@ -546,7 +546,7 @@ class SAR_Project:
             nextP.sort()
 
             if(query_not):
-                result = self.reverse_posting(nextP)
+                nextP = self.reverse_posting(nextP)
                 query_not = False
             
             if(query_and):

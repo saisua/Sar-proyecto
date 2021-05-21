@@ -382,12 +382,11 @@ class SAR_Project:
 
         if self.multifield:
             
-            fi = []
-            for i in self.fields:
-                fi.append(i[0])
+            fields = tuple(map(itemgetter(0), self.fields))
+            
 
-            for field in range(len(fi)):
-                for termino in self.index[fi[field]].keys():
+            for field in fields:
+                for termino in self.index[field].keys():
                     t = termino
                     termino += '$'
                     permu = []
@@ -395,7 +394,8 @@ class SAR_Project:
                     for i in range(len(termino)):
                         termino = termino[1:] + termino[0]
                         permu.append(termino)
-                    self.ptindex[fi[field]][t] = len(permu) if self.ptindex[fi[field]].get(t) == None else self.ptindex[fi[field]][t] + len(permu)    
+                    self.ptindex[field][t] = permu
+                    # self.ptindex[fi[field]][t] = len(permu) if self.ptindex[fi[field]].get(t) == None else self.ptindex[fi[field]][t] + len(permu)    
         else:
             for termino in self.index['article'].keys():
                 termino += '$'
@@ -405,7 +405,7 @@ class SAR_Project:
                     termino = termino[1:] + termino[0]
                     permu.append(termino)
 
-                self.ptindex['article'][termino] = len(permu) +1
+                self.ptindex['article'][termino] = permu
 
     def make_distance(self, doc:tuple, doc_tokens:list):
         self.weight[doc] = set(nltk.ngrams(doc_tokens, 2))
@@ -433,7 +433,7 @@ class SAR_Project:
         )
 
         for key, token_dict in self.index.items():
-            print(f"\t# of tokens in '{key}': {len(token_dict.values())}")
+            print(f"\t# of tokens in '{key}': {len(token_dict)}")
         print("----------------------------------------\n"
             "PERMUTERMS:")
         for key, token_dict in self.ptindex.items():
@@ -441,7 +441,7 @@ class SAR_Project:
         print("----------------------------------------\n"
             "STEMS:")
         for key, token_dict in self.sindex.items():
-            print(f"\t# of stems in '{key}': {len(token_dict.values())}")
+            print(f"\t# of stems in '{key}': {len(token_dict)}")
         print("----------------------------------------\n"
             f"Positional queries are{' ' if self.positional else ' NOT '}allowed.\n"
             "========================================")
@@ -853,11 +853,15 @@ class SAR_Project:
         ast_pos = termino.find('*')
         query = termino[ast_pos+1:] + '$' + termino[:ast_pos]
 
-        for permuterms in self.ptindex[field]:
+        
+
+        """
+        for permuterms in self.ptindex[field]: # ptindex[field][term]
             for term in permuterms:
                 if term.startswith(query):
                     print("Permuterm encontrado")
                     return self.index[field][term]
+        """
 
         print("Permuterm no encontrado...")
         return []

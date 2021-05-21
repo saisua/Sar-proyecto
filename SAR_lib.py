@@ -437,7 +437,7 @@ class SAR_Project:
         print("----------------------------------------\n"
             "PERMUTERMS:")
         for key, token_dict in self.ptindex.items():
-            print(f"\t# of permuterms in '{key}': {len(token_dict.values())}")
+            print(f"\t# of permuterms in '{key}': {sum(val for val in token_dict.values())}")
         print("----------------------------------------\n"
             "STEMS:")
         for key, token_dict in self.sindex.items():

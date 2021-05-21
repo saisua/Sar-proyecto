@@ -1,10 +1,33 @@
 import json
-from nltk.stem.snowball import SnowballStemmer
 import os
 import re
+import nltk
+from nltk.stem.snowball import SnowballStemmer
+from nltk .corpus import wordnet
 from collections import defaultdict
 from typing import Dict
+from math import log2
+from operator import itemgetter
 
+"""
+try:
+    wordnet.synsets
+    USE_WORDNET = True
+except LookupError:
+    resp = input("Para este trabajo queriamos poder usar un modelo de nltk. "
+                "Esto implica que es necesario tener instalado el corpora 'wordnet'.\n"
+                "Si lo instalas, no te volverá a preguntar otra vez.\n"
+                "Dicho esto, el algoritmo que hemos implementado no lo requiere, aunque"
+                "funciona mejor con él.\nDescargar? y/[N] > ")
+    if('y' in resp.lower()):
+        try:
+            nltk.download('wordnet')
+            USE_WORDNET = True
+        except Exception:
+            USE_WORDNET = False
+    else:
+        USE_WORDNET = False
+"""
 
 class SAR_Project:
     """
@@ -50,11 +73,12 @@ class SAR_Project:
                 'title': {},
                 'date': {},
                 'keywords': {},
-                'summary': {},
-                'article': {}
+                'article': {},
+                'summary': {}
         } # hash para el indice permuterm.
         self.docs = {} # diccionario de documentos --> clave: entero(docid),  valor: ruta del fichero.
-        self.weight = {} # hash de terminos para el pesado, ranking de resultados. puede no utilizarse
+        self.weight = defaultdict(lambda: defaultdict(lambda: [0,0])) # hash de terminos para el pesado, ranking de resultados. puede no utilizarse
+        self.freq = defaultdict(int)
         self.news = {} # hash de noticias --> clave entero (newid), valor: la info necesaria para diferenciar la noticia dentro de su fichero (doc_id y posición dentro del documento)
         self.tokenizer = re.compile("\W+") # expresion regular para hacer la tokenizacion
         self.stemmer = SnowballStemmer('spanish') # stemmer en castellano
@@ -78,6 +102,7 @@ class SAR_Project:
                         (key3, val3) for key3, val3 in val2.items())))
                     for key2, val2 in val1.items()))) 
                 for key1, val1 in data["iindex"].items())
+        data["weight"] = dict((key1, dict((key2, val2) for key2, val2 in val1.items())) for key1, val1 in data["weight"].items())
 
         return data
 
@@ -200,7 +225,7 @@ class SAR_Project:
             self.make_stemming()
             print("DONE")
 
-        elif(self.permuterm):
+        if(self.permuterm):
             print("\tPermuterm... ", end='')
             self.make_permuterm()
             print("DONE")
@@ -239,35 +264,64 @@ class SAR_Project:
         
         self.docs[self.docid] = filename
         for num_not, noticia in enumerate(jlist):
+            doc_tuple = (self.docid, self.newid)
             for field, tokenize in self.fields:
                
                 if tokenize and field != "date":
                     tokens = self.tokenize(noticia[field])
-                    
+
+                    is_art = field == "article"
+
+                    slast = last = ""
                     for nt, token in enumerate(tokens):
                         if not self.index[field].get(token, 0):
                             self.index[field][token] = {} # self.index[field][token] = []
                             
-                        if not self.index[field][token].get((self.docid, self.newid), 0): # if (self.docid, self.newid) not in self.index[field][token]:
-                            self.index[field][token][(self.docid, self.newid)] = [] # self.index[field][token].append((self.docid, self.newid))
-                            # self.iindex[field][(self.docid, self.newid)][token].append(nt)
-                            self.iindex[field][self.docid][token].append(nt)
-                        self.index[field][token][(self.docid, self.newid)].append(nt)
+                        if not self.index[field][token].get(doc_tuple, 0): # if doc_tuple not in self.index[field][token]:
+                            self.index[field][token][doc_tuple] = [] # self.index[field][token].append(doc_tuple)
+                            # self.iindex[field][doc_tuple][token].append(nt)
+                            self.iindex[field][doc_tuple][token].append(nt)
+                        self.index[field][token][doc_tuple].append(nt)
+
+                        # To be optimized
+                        if(is_art):
+                            if(last):
+                                self.weight[last][token][1] += 1
+
+                            weight_dict = self.weight[token]# Before, after
+                                
+                            weight_dict[last][0] += 1
+                            self.freq[token] += 1
+                            last = token
+
+
+                            if(self.stemmer):
+                                stoken = self.stemmer.stem(token)
+                                if(stoken != token):
+                                    if(slast):
+                                        self.weight[slast][stoken][1] += 1
+
+                                    weight_dict = self.weight[stoken]# Before, after
+                                        
+                                    weight_dict[slast][0] += 1
+                                    self.freq[stoken] += 1
+                                    slast = stoken
                     
                 else:
                     token = noticia[field]
                     if not self.index[field].get(token, 0):
                             self.index[field][token] = {} # self.index[field][token] = {}
-                    if not self.index[field][token].get((self.docid, self.newid), 0): # if (self.docid, self.newid) not in self.index[field][token]:
-                        self.index[field][token][(self.docid, self.newid)] = [] # self.index[field][token].append((self.docid, self.newid))
-                        self.iindex[field][self.docid][token].append(0)
-                    self.index[field][token][(self.docid, self.newid)].append(nt) # ??
+                    if not self.index[field][token].get(doc_tuple, 0): # if doc_tuple not in self.index[field][token]:
+                        self.index[field][token][doc_tuple] = [] # self.index[field][token].append(doc_tuple)
+                        self.iindex[field][doc_tuple][token].append(0)
+                    self.index[field][token][doc_tuple].append(nt) # ??
                     nt = 1 # ??
 
             self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt, self.newid-num_not)
             self.newid += 1
             
             self.num_days[noticia['date']] = True
+
         self.docid += 1
 
 
@@ -302,9 +356,13 @@ class SAR_Project:
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
 
+        if(self.multifield):
+            index_dict = self.index
+        else:
+            index_dict = {"article": self.index["article"]}
 
-        # self.index[field][token].append((self.docid, self.newid))
-        for field, doc_dict in self.index.items():
+        # self.index[field][token].append(doc_tuple)
+        for field, doc_dict in index_dict.items():
             for token, doc_list in doc_dict.items():
                 # 1- Todos los field existen, y están 
                 self.sindex[field][self.stemmer.stem(token)] = doc_list
@@ -349,7 +407,9 @@ class SAR_Project:
 
                 self.ptindex['article'][termino] = len(permu) +1
 
-
+    def make_distance(self, doc:tuple, doc_tokens:list):
+        self.weight[doc] = set(nltk.ngrams(doc_tokens, 2))
+        self.weight_length[doc] = len(doc_tokens)
 
 
     def show_stats(self):
@@ -410,7 +470,12 @@ class SAR_Project:
 
         """
 
-        if query is None or len(query) == 0:
+        if(query is None or len(query) == 0):
+            return []
+        
+        query = query.strip()
+
+        if(query.startswith("AND") or query.startswith("OR")):
             return []
 
         ########################################
@@ -419,9 +484,81 @@ class SAR_Project:
         result = []
         self.searched_terms = []
 
-        
-        queryPartida = query.split()
+        permuterm_regex = re.compile(r"[?*]")
 
+
+        query_not = query_and = query_or = False
+
+        # Usado generadores evitamos el uso de memoria
+        if(self.use_stemming):
+            query_iter = (
+                    (word if word in {"NOT", "AND", "OR"}
+                        else self.stemmer.stem(word)
+                    for word in query.split()))
+        else:
+            query_iter = iter(query.split())
+
+        # recorrem la query, i evitem que bote la excepció del iterador
+        for query_word in query_iter: 
+            if query_word == "NOT": # si comença amb NOT -> neguem el seguent token
+                query_not = True
+                continue
+            elif query_word == "AND":
+                query_and = True
+                continue
+            elif query_word == "OR":
+                query_or = True
+                continue
+
+
+            if query_word.startswith('\"'): # posicional
+                query_word = query_word.lstrip('\"')
+
+                positional = []
+                try:
+                    while not query_word.endswith("\""):
+                        positional.append(query_word)
+                        query_word = next(query_iter)
+                except StopIteration:
+                    # Deberiamos devolver una lista vacía??
+                    # O dejar pasar una excepción?
+                    return []
+
+                positional.append(query_word.rstrip('\"'))
+                nextP = self.get_positionals(positional)
+
+            elif(not self.use_stemming and permuterm_regex.search(query_word)): # permuterm
+                # Aqui ponia "queryPartida[1]". Supongo que
+                # estaba mal, así que lo cambio.
+                nextP = self.get_permuterm(query_word)
+
+            else: # Multifield & base
+                # Aqui se contemplan ambos casos, que haya ':',
+                # como que no lo haya. Split devolverá uno o dos
+                # elementos en base a si lo hay, y evitamos código
+                # y recorridos de strings innecesarios 
+                nextP = self.get_posting(*query_word.split(':',1))
+ 
+            # Esto hay que quitarlo. En serio alguna de
+            # estas funciones devuelve un diccionario??
+            # Que el tipo sea indefinido es una mala práxis
+            nextP = list(nextP)
+            nextP.sort()
+
+            if(query_not):
+                result = self.reverse_posting(nextP)
+                query_not = False
+            
+            if(query_and):
+                result = self.and_posting(result, nextP)
+                query_and = False
+            elif(query_or):
+                result = self.or_posting(result, nextP)
+                query_or = False
+            else:
+                result = nextP
+
+        """
         i = 0
         if queryPartida[i] == "AND" or queryPartida[i] == "OR": # comprovem que la cadena no comence per operadors
             return result
@@ -584,6 +721,7 @@ class SAR_Project:
                         result = list(result)
                         result.sort()
                 i = i + 1
+        """
         # print(result)
         return result
 
@@ -613,7 +751,10 @@ class SAR_Project:
         ########################################
         
         self.searched_terms.append(field + ":" + term)
-        return self.index[field].get(term, [])
+        if(self.use_stemming):
+            return self.sindex[field].get(term, [])
+        else:
+            return self.index[field].get(term, [])
 
 
 
@@ -635,7 +776,10 @@ class SAR_Project:
             terms[-1] = terms[-1][:-1]
 
         # print(terms[0])
-        aux = self.index[field][terms[0]]
+        if(self.use_stemming):
+            aux = self.sindex[field][terms[0]]
+        else:
+            aux = self.index[field][terms[0]]
         # print(aux)
         result = []
         vists = []
@@ -691,13 +835,11 @@ class SAR_Project:
         return: posting list
 
         """
-        
-        stem = self.stemmer.stem(term)
 
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
-        return self.sindex[stem].get(term, [])
+        return self.sindex[field].get(self.stemmer.stem(term), [])
 
 
     def get_permuterm(self, term, field='article'):
@@ -720,7 +862,7 @@ class SAR_Project:
         print("Permuterm en funcionamiento")
         termino = term.replace("?", "*")
         query = termino + '$'
-        while query[-1] is not "*":
+        while query[-1] != "*":
             query = query[1:] + query[0]
 
         for permuterms in self.ptindex:
@@ -929,24 +1071,45 @@ class SAR_Project:
         return: el numero de noticias recuperadas, para la opcion -T
         
         """
+
+        print(f"Query: '{query}'")
+
+        if(self.use_stemming):
+            query = ' '.join(
+                    (word if word in {"NOT", "AND", "OR"}
+                        else self.stemmer.stem(word)
+                    for word in query.split()))
+
         result = self.solve_query(query)
-        if self.use_ranking:
-            result = self.rank_result(result, query)   
+
+        print(f"Number of results: {len(result)}")
 
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
         ########################################
-        
-        print(f"Query: '{query}'\nNumber of results: {len(result)}")
 
         query_words = set(filter(None, map(
-            lambda word: word.split(':')[-1],
-            re.sub("(NOT\s+\S+)|(AND)|OR", '', query.lower()).split())))
+            lambda word: word.split(':',1)[-1],
+            re.sub("(NOT\s+\S+)|(AND)|(OR)", '', query.lower()).split())))
 
+        if(self.use_stemming):
+            query_words = set(self.stemmer.stem(word) for word in query_words)
+
+
+        if self.use_ranking:
+            result = self.rank_result(result, query_words)   
+
+        clean_regex = re.compile("[\W\n\t]+")
+
+        # Debido a la posible gran cantidad de documentos,
+        # Hago una lista con los string de los print para
+        # evitar las interrupciones del sistema y optimizar
+        # el código.
+        found_match = []
         if self.show_snippet:
             last_doc_id = -1
             for solved in result:
-                doc_id, news_num = solved
+                doc_id, news_num = solved[:2]
                 
                 # self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt)
                 _, date, title, keywords, _, news_in_doc_num = self.news[news_num]
@@ -957,14 +1120,17 @@ class SAR_Project:
                         # Only get news for memory usage
                         docs = tuple(map(lambda news: news["article"], json.load(file)))
 
-                article = docs[news_num-news_in_doc_num].lower().split()
+                article = clean_regex.sub(' ', docs[news_num-news_in_doc_num].lower()).split()
 
-                print(f"#{solved[1]}\n"
+                if(self.use_stemming):
+                    article = tuple(map(self.stemmer.stem, article))
+
+                found_match.append(f"#{doc_id}\n"
                     f"Score: { 0 if len(solved) <3 else solved[2]}\n"
                     f"{doc_id}\n"
                     f"Date: {date}\n"
                     f"Title: {title}\n"
-                    f"Keywords: {keywords}"
+                    f"Keywords: {keywords}\n"
                 )
 
                 last_pos = 0
@@ -972,17 +1138,19 @@ class SAR_Project:
                 for pos, word in enumerate(article):
                     if(word in query_words):
                         if(last_pos and pos > last_pos+words_printed):
-                            print(" ... ", end='')
+                            found_match.append(" ... ")
                         else:
-                            print(' ', end='')
+                            found_match.append(' ')
                         
-                        print(' '.join(
+                        found_match.append(' '.join(
                                 article[max(last_pos, pos-words_printed) : pos+words_printed]
-                            ), end='')
+                            ))
                         last_pos = pos
                 if(not last_pos):
-                    print("No se han encontrado snippets en el cuerpo de la notícia",end='')
-                print('\n--------------------\n')
+                    found_match.append("No se han encontrado snippets en el cuerpo de la notícia ")
+                found_match.append("\n--------------------\n\n")
+
+        print(''.join(found_match))
 
         return len(result)
 
@@ -1001,13 +1169,37 @@ class SAR_Project:
         return: la lista de resultados ordenada
 
         """
-
-        pass
         
         ###################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE RANKING ##
         ###################################################
 
+        scored_result = []
+
+        weight_dict = self.weight
+        query = set(q for q in query if q in weight_dict)
+
+        for doc in result:
+            tokens = self.iindex["article"][doc]
+            good_score = 0
+            good_tokens = 0
+
+            doc_toks = (tokens.keys() if not self.use_stemming else
+                            (map(self.stemmer.stem, tokens.keys())))
+
+            for tok in doc_toks:
+                for good in query:
+                    if(tok in weight_dict[good]):
+                        good_score += sum(weight_dict[good][tok]) / self.freq[tok]
+                        good_tokens += 1
+                
+            scored_result.append((*doc, good_tokens*good_score))
+
+        return sorted(scored_result, key=itemgetter(2), reverse=True)
+
+                
+
+                
 
 
 if __name__ == "__main__":

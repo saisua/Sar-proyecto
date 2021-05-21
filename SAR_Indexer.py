@@ -32,10 +32,6 @@ if __name__ == "__main__":
     newsdir = args.newsdir
     indexfile = args.index
 
-    if(args.stem and args.permuterm):
-        print("!! Desabilitado permuterm por el uso de stemming")
-        args.permuterm = False
-
     indexer = SAR_Project()
     t0 = time.time()
     indexer.index_dir(newsdir, **vars(args))

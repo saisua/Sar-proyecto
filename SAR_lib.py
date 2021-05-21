@@ -437,7 +437,7 @@ class SAR_Project:
         print("----------------------------------------\n"
             "PERMUTERMS:")
         for key, token_dict in self.ptindex.items():
-            print(f"\t# of permuterms in '{key}': {sum(val for val in token_dict.values())}")
+            print(f"\t# of permuterms in '{key}': {len(x)}")
         print("----------------------------------------\n"
             "STEMS:")
         for key, token_dict in self.sindex.items():
@@ -850,13 +850,12 @@ class SAR_Project:
         # self.make_permuterm()        
         print("Permuterm en funcionamiento")
         termino = term.replace("?", "*")
-        query = termino + '$'
-        while query[-1] != "*":
-            query = query[1:] + query[0]
+        ast_pos = termino.find('*')
+        query = termino[ast_pos+1:] + '$' + termino[:ast_pos]
 
-        for permuterms in self.ptindex:
+        for permuterms in self.ptindex[field]:
             for term in permuterms:
-                if term.startswith(query[:-1]):
+                if term.startswith(query):
                     print("Permuterm encontrado")
                     return self.index[field][term]
 

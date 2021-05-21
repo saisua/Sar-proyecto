@@ -69,13 +69,8 @@ class SAR_Project:
         self.iindex = dict(((field,defaultdict(lambda:defaultdict(list))) for field, _ in self.fields))
         # hash para termino -> clave
         self.sindex = dict(((field,{}) for field, _ in self.fields)) # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
-        self.ptindex = {
-                'title': {},
-                'date': {},
-                'keywords': {},
-                'article': {},
-                'summary': {}
-        } # hash para el indice permuterm.
+        self.ptindex = dict(((field,defaultdict(set)) for field, _ in self.fields)) # hash para el indice permuterm.
+        self.ptindex_strict = dict(((field,defaultdict(set)) for field, _ in self.fields)) # hash para el indice permuterm.
         self.docs = {} # diccionario de documentos --> clave: entero(docid),  valor: ruta del fichero.
         self.weight = defaultdict(lambda: defaultdict(lambda: [0,0])) # hash de terminos para el pesado, ranking de resultados. puede no utilizarse
         self.freq = defaultdict(int)
@@ -381,31 +376,25 @@ class SAR_Project:
         ####################################################
 
         if self.multifield:
-            
             fields = tuple(map(itemgetter(0), self.fields))
-            
-
-            for field in fields:
-                for termino in self.index[field].keys():
-                    t = termino
-                    termino += '$'
-                    permu = []
-
-                    for i in range(len(termino)):
-                        termino = termino[1:] + termino[0]
-                        permu.append(termino)
-                    self.ptindex[field][t] = permu
-                    # self.ptindex[fi[field]][t] = len(permu) if self.ptindex[fi[field]].get(t) == None else self.ptindex[fi[field]][t] + len(permu)    
         else:
-            for termino in self.index['article'].keys():
-                termino += '$'
-                permu = []
+            fields = ["article"]
 
-                for i in range(len(termino)-1):
-                    termino = termino[1:] + termino[0]
-                    permu.append(termino)
+        for field in fields:
+            for token, doc_dict in self.index[field].items():
+                termino = token + '$'
 
-                self.ptindex['article'][termino] = permu
+                for perm in range(len(termino)+1):
+                    perm_term = termino[perm-1:] + termino[:perm]
+
+                    if(not perm_term.endswith("$")):
+                        self.ptindex_strict[field][perm_term[:-2]].update(doc_dict.keys())
+
+                    # Añadimos los documentos a los prefijos
+                    # para los cálculos de *
+                    for prefix in range(len(perm_term) - perm_term.find('$')):
+                        self.ptindex[field][perm_term[:-prefix]].update(doc_dict.keys())
+                    # self.ptindex[fi[field]][t] = len(permu) if self.ptindex[fi[field]].get(t) == None else self.ptindex[fi[field]][t] + len(permu)    
 
     def make_distance(self, doc:tuple, doc_tokens:list):
         self.weight[doc] = set(nltk.ngrams(doc_tokens, 2))
@@ -556,10 +545,10 @@ class SAR_Project:
                 result = nextP
 
         """
-        i = 0
-        if queryPartida[i] == "AND" or queryPartida[i] == "OR": # comprovem que la cadena no comence per operadors
+            i = 0
+            if queryPartida[i] == "AND" or queryPartida[i] == "OR": # comprovem que la cadena no comence per operadors
             return result
-        if len(queryPartida) <3: # per a cadenes amb <3 elements
+            if len(queryPartida) <3: # per a cadenes amb <3 elements
             if len(queryPartida) == 2 and queryPartida[i] == "NOT": # si comença amb NOT -> negació
                 if ':' in queryPartida[1]:
                     mqPartida = queryPartida[1].split(':')
@@ -587,7 +576,7 @@ class SAR_Project:
                 return nextP
             else: # si no es compleixen les condicions -> error de sintaxi
                 return result
-        else: # per a queries >2 elements
+           else: # per a queries >2 elements
             while i < len(queryPartida) - 1: # recorrem la query
                 if queryPartida[i] == "NOT": # si comença amb NOT -> neguem el seguent token
                     if ':' in queryPartida[i + 1]:
@@ -847,13 +836,20 @@ class SAR_Project:
         ##################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA PERMUTERM ##
         ##################################################
-        # self.make_permuterm()        
-        print("Permuterm en funcionamiento")
-        termino = term.replace("?", "*")
-        ast_pos = termino.find('*')
-        query = termino[ast_pos+1:] + '$' + termino[:ast_pos]
 
-        
+        ast_pos = term.find('*')
+        if(ast_pos != -1):
+            return list(self.ptindex[field].get(
+                    term[ast_pos+1:] + '$' + term[:ast_pos]
+                    , []))
+
+        quest_pos = term.find('?')
+        if(quest_pos != -1):
+            return list(self.ptindex_strict[field].get(
+                    term[quest_pos+1:] + '$' + term[:quest_pos]
+                    , []))
+
+        return []
 
         """
         for permuterms in self.ptindex[field]: # ptindex[field][term]
@@ -863,8 +859,6 @@ class SAR_Project:
                     return self.index[field][term]
         """
 
-        print("Permuterm no encontrado...")
-        return []
 
 
 
@@ -1100,7 +1094,7 @@ class SAR_Project:
         found_match = []
         if self.show_snippet:
             last_doc_id = -1
-            for solved in result:
+            for solved in (result if self.show_all else result[:10]):
                 doc_id, news_num = solved[:2]
                 
                 # self.news[self.newid] = (self.docid, noticia["date"], noticia["title"], noticia["keywords"], nt)

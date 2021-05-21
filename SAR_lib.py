@@ -482,7 +482,7 @@ class SAR_Project:
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
         ########################################
         result = []
-        self.searched_terms = []
+        self.searched_terms.clear()
 
         permuterm_regex = re.compile(r"[?*]")
 
@@ -539,10 +539,7 @@ class SAR_Project:
                 # y recorridos de strings innecesarios 
                 nextP = self.get_posting(*(query_word.split(':',1)[::-1]))
  
-            # Esto hay que quitarlo. En serio alguna de
-            # estas funciones devuelve un diccionario??
-            # Que el tipo sea indefinido es una mala práxis
-            nextP = list(nextP)
+
             nextP.sort()
 
             if(query_not):
@@ -752,9 +749,9 @@ class SAR_Project:
         
         self.searched_terms.append(field + ":" + term)
         if(self.use_stemming):
-            return self.sindex[field].get(term, [])
+            return list(self.sindex[field].get(term, []).keys())
         else:
-            return self.index[field].get(term, [])
+            return list(self.index[field].get(term, []).keys())
 
 
 
@@ -812,14 +809,6 @@ class SAR_Project:
                     if (key, key2) in result: result.remove((key, key2))
                 coincidencia = False
 
-
-        
-        # TODO:
-        # comprovar que la clau de self.index[field][term] 
-        # comprovar per a que hi hagen números contigus de aparicions (posició + t per trobar el desplaçament de paraules)
-        # eliminar de result totes les claus (docid, newid) que no continguen posicions contigues
-        # repetir per al seguent terme
-        # print("returning")
         return result
 
 
@@ -1126,7 +1115,7 @@ class SAR_Project:
                     article = tuple(map(self.stemmer.stem, article))
 
                 found_match.append(f"#{doc_id}\n"
-                    f"Score: { 0 if len(solved) <3 else solved[2]}\n"
+                    f"Score: { 0 if self.use_ranking else solved[2]}\n"
                     f"{doc_id}\n"
                     f"Date: {date}\n"
                     f"Title: {title}\n"

@@ -433,15 +433,15 @@ class SAR_Project:
         )
 
         for key, token_dict in self.index.items():
-            print(f"\t# of tokens in '{key}': {len(token_dict.values())}")
+            print(f"\t# of tokens in '{key}': {len(token_dict)}")
         print("----------------------------------------\n"
             "PERMUTERMS:")
         for key, token_dict in self.ptindex.items():
-            print(f"\t# of permuterms in '{key}': {len(x)}")
+            print(f"\t# of permuterms in '{key}': {len(token_dict)}")
         print("----------------------------------------\n"
             "STEMS:")
         for key, token_dict in self.sindex.items():
-            print(f"\t# of stems in '{key}': {len(token_dict.values())}")
+            print(f"\t# of stems in '{key}': {len(token_dict)}")
         print("----------------------------------------\n"
             f"Positional queries are{' ' if self.positional else ' NOT '}allowed.\n"
             "========================================")
@@ -853,11 +853,15 @@ class SAR_Project:
         ast_pos = termino.find('*')
         query = termino[ast_pos+1:] + '$' + termino[:ast_pos]
 
-        for permuterms in self.ptindex[field]:
+        
+
+        """
+        for permuterms in self.ptindex[field]: # ptindex[field][term]
             for term in permuterms:
                 if term.startswith(query):
                     print("Permuterm encontrado")
                     return self.index[field][term]
+        """
 
         print("Permuterm no encontrado...")
         return []

@@ -738,9 +738,9 @@ class SAR_Project:
         
         self.searched_terms.append(field + ":" + term)
         if(self.use_stemming):
-            return list(self.sindex[field].get(term, []).keys())
+            return list(self.sindex[field].get(term, {}).keys())
         else:
-            return list(self.index[field].get(term, []).keys())
+            return list(self.index[field].get(term, {}).keys())
 
 
 

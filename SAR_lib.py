@@ -1037,7 +1037,14 @@ class SAR_Project:
         return: el numero de noticias recuperadas, para la opcion -T
 
         """
+        if(self.use_stemming):
+            query = ' '.join(
+                    (word if word in {"NOT", "AND", "OR"}
+                        else self.stemmer.stem(word)
+                    for word in query.split()))
+
         result = self.solve_query(query)
+        
         print("%s\t%d" % (query, len(result)))
         return len(result)  # para verificar los resultados (op: -T)
 

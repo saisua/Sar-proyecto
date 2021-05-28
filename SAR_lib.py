@@ -519,7 +519,7 @@ class SAR_Project:
             elif(not self.use_stemming and permuterm_regex.search(query_word)): # permuterm
                 # Aqui ponia "queryPartida[1]". Supongo que
                 # estaba mal, así que lo cambio.
-                nextP = self.get_permuterm(query_word)
+                nextP = self.get_permuterm(*(query_word.split(':',1)[::-1]))
 
             else: # Multifield & base
                 # Aqui se contemplan ambos casos, que haya ':',

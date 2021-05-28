@@ -462,7 +462,7 @@ class SAR_Project:
         if(query is None or len(query) == 0):
             return []
         
-        query = query.strip()
+        query = query.lower().strip()
 
         if(query.startswith("AND") or query.startswith("OR")):
             return []
@@ -735,7 +735,7 @@ class SAR_Project:
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
         ########################################
-        
+
         self.searched_terms.append(field + ":" + term)
         if(self.use_stemming):
             return list(self.sindex[field].get(term, {}).keys())
